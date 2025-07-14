@@ -6,6 +6,13 @@ const jwt = require('jsonwebtoken');
 
 const uuid = require('uuid').v4;
 
+//for uploading file in server 
+const fs = require('fs');
+const path = require('path');
+
+// cloudinary 
+const cloudinary = require('../utils/cloudinary');
+
 
 
 // ========= register user =================
@@ -210,30 +217,52 @@ const followUnfollowUser = async (req, res, next) => {
 
 const changeUserAvatar = async (req, res, next) => {
      try {
-         // check their is image selected or not
-          if(!req.files.avatar){
-               return next( new HttpError('please select file',422 ))
+          if (!req.files || !req.files.avatar) {
+               return next(new HttpError('Please select a file', 422));
           }
-          const {avatar} = req.files;
 
-          if(avatar.size > 500000){
-               return next(new HttpError('file size is too big.'));
+          const { avatar } = req.files;
 
+          if (avatar.size > 5000000) {
+               return next(new HttpError('File size is too big.'));
           }
-          let fileName = avatar.name;
-          let spiltName = fileName.split('.');
 
+          const fileName = avatar.name;
+          const spiltName = fileName.split('.');
+          const newFileName = spiltName[0] + uuid() + '.' + spiltName[spiltName.length - 1];
 
-          //actual file name [this is for new file name every time we upload]
-          let newFileName = spiltName[0] + uuid() + '.' + spiltName[spiltName.length -1];
-          res.json(newFileName)
+          const filePath = path.join(__dirname, '..', 'uploads', newFileName);
 
-          
+          avatar.mv(filePath, async (error) => {
+               if (error) {
+                    return next(new HttpError(error));
+               }
 
+               try {
+                    const result = await cloudinary.uploader.upload(filePath, {
+                         resource_type: "image"
+                    });
+
+                    if (!result.secure_url) {
+                         return next(new HttpError("Couldn't upload image to Cloudinary", 422));
+                    }
+
+                    const updatedUser = await userModel.findByIdAndUpdate(
+                         req.user.id,
+                         { profilePhoto: result.secure_url },
+                         { new: true }
+                    );
+
+                    res.status(200).json(updatedUser);
+               } catch (err) {
+                    return next(new HttpError(err));
+               }
+          });
      } catch (error) {
-          return next(HttpError(error));
+          return next(new HttpError(error));
      }
-}
+};
+
 
 // exporting all modules
 

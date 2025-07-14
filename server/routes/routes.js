@@ -9,7 +9,7 @@ const authMiddleware = require('../middlewares/authMiddleware');
 // --------- POST requests ---------------------
 router.post('/users/register', registerUser);
 router.post('/users/login', loginUser);
-router.post('/users/avatar', changeUserAvatar);
+router.post('/users/avatar', authMiddleware, changeUserAvatar);
 
 // --------- GET requests ---------------------
 
