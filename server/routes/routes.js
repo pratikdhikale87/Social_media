@@ -32,7 +32,7 @@ router.get('/users/:id/posts', getUserPosts);
 
 // ---------------- Post requests -------------- 
 
-router.post('/posts',createPost);
+router.post('/posts',authMiddleware,createPost);
 router.post('/post/:id/bookmark',createBookmark)
 
 //------------------Get requests ----------------

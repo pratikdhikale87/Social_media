@@ -1,10 +1,10 @@
-const HttpError = require('../middlewares/errorMiddleware');
+const HttpError = require('../models/errorModel');
 
 const postModel = require('../models/postModel');
 const userModel = require('../models/userModel');
 
 
-const {u4: uuid} = require('uuid');
+const { v4: uuid } = require('uuid');
 const cloudinary = require('../utils/cloudinary');
 const fs = require('fs');
 const path = require('path');
@@ -14,13 +14,57 @@ const path = require('path');
 //POST : api/posts
 //protected 
 
-const createPost = async(req,res,next) =>{
-     try{
-          res.json('create Post');
-     }catch(error){
+const createPost = async (req, res, next) => {
+     try {
+          const { body } = req.body;
+
+          // Validate post body
+          if (!body) {
+               return next(new HttpError('Fill the text fields and choose an image', 422));
+          }
+
+          // Validate image file
+          if (!req.files || !req.files.image) {
+               return next(new HttpError('Please choose an image', 422));
+          }
+
+          const image = req.files.image;
+
+          // Rename image with UUID
+          const fileExt = image.name.split('.').pop();
+          const fileName = image.name.split('.')[0] + uuid() + '.' + fileExt;
+          const filePath = path.join(__dirname, '..', 'uploads', fileName);
+
+          // Save file locally
+          await image.mv(filePath);
+
+          // Upload to Cloudinary
+          const result = await cloudinary.uploader.upload(filePath, {
+               resource_type: 'image',
+          });
+          
+          if (!result.secure_url) {
+               return next(new HttpError('Could not upload the image', 422));
+          }
+
+          // Create post
+          const newPost = await postModel.create({
+               creator: req.user.id,
+               body,
+               image: result.secure_url,
+          });
+
+          // Update user's posts list
+          await userModel.findByIdAndUpdate(newPost.creator, {
+               $push: { posts: newPost._id },
+          });
+
+          res.json(newPost);
+     } catch (error) {
+       
           return next(new HttpError(error));
      }
-}
+};
 
 //===================GET POST-----------=== 12️⃣
 //GET : api/posts/:id
