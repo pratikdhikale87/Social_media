@@ -2,7 +2,7 @@ const HttpError = require('../models/errorModel');
 
 const postModel = require('../models/postModel');
 const userModel = require('../models/userModel');
-
+// const mongoose = require('mongoose');
 
 const { v4: uuid } = require('uuid');
 const cloudinary = require('../utils/cloudinary');
@@ -72,11 +72,31 @@ const createPost = async (req, res, next) => {
 
 const getPost = async (req, res, next) => {
      try {
-          res.json('get Post');
+          const { id } = req.params;
+
+          // Validate MongoDB ObjectId
+         
+
+          const post = await postModel.findById(id);
+
+          // after creating comment  module we have to consider this 
+     //      .populate('creator')
+     // .populate({
+     //      path: 'comment',
+     //      options: { sort: { createdAt: -1 } }
+     // })
+
+          if (!post) {
+               return next(new HttpError('Post not found', 404));
+          }
+
+          res.json(post);
      } catch (error) {
-          return next(new HttpError(error));
+          console.error('GET POST ERROR:', error);
+          return next(new HttpError(error.message || 'Failed to fetch post', 500));
      }
-}
+};
+
 
 //===================GET POSTS-----------=== 1️3️⃣
 //GET : api/posts
@@ -84,7 +104,8 @@ const getPost = async (req, res, next) => {
 
 const getPosts = async (req, res, next) => {
      try {
-          res.json('get all Post');
+          const posts = await postModel.find().sort({createdAt : -1});
+          res.json(posts);
      } catch (error) {
           return next(new HttpError(error));
      }
@@ -97,11 +118,30 @@ const getPosts = async (req, res, next) => {
 
 const updatePost = async (req, res, next) => {
      try {
-          res.json('update Post');
+          const postId = req.params.id;
+          const { body } = req.body;
+
+          const post = await postModel.findById(postId);
+
+          // Check if the logged-in user is the creator
+          if (!post || post.creator.toString() !== req.user.id) {
+               return next(new HttpError('You are not the creator of the post', 403));
+          }
+
+          // Update the post
+          const updatedPost = await postModel.findByIdAndUpdate(
+               postId,
+               { body },
+               { new: true }
+          );
+
+          return res.status(200).json(updatedPost);
      } catch (error) {
-          return next(new HttpError(error));
+          return next(new HttpError(error.message || 'Something went wrong'));
      }
-}
+};
+
+
 
 
 //=================== DELETE POST-----------=== 5️⃣
