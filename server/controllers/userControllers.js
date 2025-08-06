@@ -22,7 +22,7 @@ const cloudinary = require('../utils/cloudinary');
 const registerUser = async (req, res, next) => {
      try {
           const { fullName, email, password, confirmPassword } = req.body;
-
+         
           if (!fullName || !email || !password || !confirmPassword) {
                return next(new HttpError('Please fill all fields in the form', 422));
           }

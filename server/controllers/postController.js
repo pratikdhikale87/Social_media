@@ -150,11 +150,27 @@ const updatePost = async (req, res, next) => {
 
 const deletePost = async (req, res, next) => {
      try {
-          res.json('delete Post');
+          const postId = req.params.id;
+          // check user is creator of post or not first
+          const post = await postModel.findById(postId);
+
+          if(post?.creator != req.user.id){
+               return next(new HttpError('only creator of post can delete it',403));
+          }
+
+          const postDelete = await postModel.findByIdAndDelete(postId);
+
+          if (!postDelete) {
+               return next(new HttpError('Cannot delete the post', 404));
+          }
+
+           res.status(200).json({ message: 'Deleted successfully' });
+           await userModel.findByIdAndDelete(post?.creator, {$pull : {posts : post?._id}});
      } catch (error) {
-          return next(new HttpError(error));
+          return next(new HttpError(error.message || 'Something went wrong'));
      }
-}
+};
+
 
 
 //===================FOLLOWING PEOPLE POST-----------=== 6️⃣
@@ -163,11 +179,27 @@ const deletePost = async (req, res, next) => {
 
 const getFollowingPosts = async (req, res, next) => {
      try {
-          res.json('following person Posts');
+          // Get only the 'following' field of the current user
+          const user = await userModel
+               .findById(req.user.id)
+               .select('following');
+               console.log(user)
+
+          // Guard: make sure it is always an array
+          const followingArr = Array.isArray(user.following) ? user.following : [];
+   
+          // Fetch posts created by users the current user is following
+          const posts = await postModel
+               .find({ creator: { $in: followingArr } })
+               .sort({ createdAt: -1 }); // newest first (optional)
+
+          
+          return res.status(200).json(posts);
      } catch (error) {
-          return next(new HttpError(error));
+          return next(new HttpError(error.message || 'Something went wrong'));
      }
-}
+};
+
 
 //===================LIKE DISLIKE POST-----------=== 1️⃣
 //POST : api/posts/:id/like

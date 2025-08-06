@@ -39,13 +39,13 @@ router.post('/post/:id/bookmark', createBookmark)
 router.get('/posts', getPosts);
 router.get('/posts/:id', getPost);
 router.get('/posts/:id/like', likeDisLikePost);
-router.get('/posts/following', getFollowingPosts);
+router.get('/post/following',authMiddleware, getFollowingPosts);
 
 //------------------Patch requests --------------
 router.patch('/posts/:id', authMiddleware,updatePost);
 
 //------------------Delete requests -------------
-router.delete('/posts/:id', deletePost);
+router.delete('/posts/:id', authMiddleware,deletePost);
 
 
 
