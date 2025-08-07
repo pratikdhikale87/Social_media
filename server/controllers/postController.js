@@ -219,7 +219,9 @@ const likeDisLikePost = async (req, res, next) => {
 
 const getUserPosts = async (req, res, next) => {
      try {
-          res.json('get user Post');
+         const userId = req.params.id;
+         // now get all posts
+         const posts = userModel.findById(userId).populate({path: 'posts', options: {sort : {createdAt : -1}}})
      } catch (error) {
           return next(new HttpError(error));
      }
@@ -232,7 +234,22 @@ const getUserPosts = async (req, res, next) => {
 
 const createBookmark = async (req, res, next) => {
      try {
-          res.json('create bookmark to Post');
+         
+          // creating book mark need to store bookmark on server
+          const {id} = req.params;
+
+          const user = await userModel.findById(req.user.id);
+          // post is bookmarked or not 
+          const postBookmarked = user?.bookmarks?.includes(id);
+
+          if(postBookmarked){
+               const userBookmark = await userModel.findByIdAndUpdate(req.user.id, {$pull : {bookmarks : id}}, {new : true});
+               res.json(userBookmark);
+          }else{
+               const userBookmark = await userModel.findByIdAndUpdate(req.user.id, {$push : {bookmarks : id}}, {new : true});
+               res.json(userBookmark);
+          }
+
      } catch (error) {
           return next(new HttpError(error));
      }
@@ -245,7 +262,9 @@ const createBookmark = async (req, res, next) => {
 
 const getUserBookmarks = async (req, res, next) => {
      try {
-          res.json('get  user bookmarks');
+          // getting user bookmarks 
+          const userbook = userModel.findById(req.user.id).populate({path :'bookmarks', options : {sort : {createdAt : -1}}});
+          res.json(usebook);
      } catch (error) {
           return next(new HttpError(error));
      }
